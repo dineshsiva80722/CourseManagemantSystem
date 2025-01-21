@@ -90,8 +90,6 @@ router.get('/students', async (req, res) => {
       batch: { $regex: new RegExp(batch, 'i') }
     });
 
-    console.log('Found Students:', students.length);
-
     if (students.length === 0) {
       return res.status(404).json({ 
         message: 'No students found matching the criteria', 
@@ -102,17 +100,16 @@ router.get('/students', async (req, res) => {
     res.json({ 
       students: students.map(student => ({
         _id: student._id,
-        firstName: student.firstName,
-        lastName: student.lastName,
+        name: student.name,
         email: student.email,
         college: student.college,
         department: student.department,
-        contactNumber: student.contactNumber,
-        fees: student.fees,
-        address: student.address,
+        mobileNo: student.mobileNo,
         course: student.course,
-        month: student.month,
+        linkedinUrl: student.linkedinUrl,
+        githubUrl: student.githubUrl,
         batch: student.batch,
+        month: student.month,
         year: student.year
       })),
       count: students.length 
@@ -130,46 +127,61 @@ router.get('/students', async (req, res) => {
 router.post('/students', async (req, res) => {
   try {
     const {
-      firstName,
-      lastName,
+      name,
       email,
-      contactNumber,
       college,
       department,
+      mobileNo,
       fees,
-      address
+      address,
+      course,
+      linkedinUrl,
+      githubUrl,
+      batch,
+      year,
+      month
     } = req.body;
 
     console.log('Attempting to create student with data:', {
-      firstName,
-      lastName,
+      name,
       email,
-      contactNumber,
       college,
       department,
+      mobileNo,
       fees,
-      address
+      address,
+      course,
+      linkedinUrl,
+      githubUrl,
+      batch,
+      year,
+      month
     });
 
     // Validate required fields
-    if (!firstName || !email || !contactNumber || !fees || !address) {
+    if (!name || !email || !mobileNo || !fees || !address) {
       console.log('Missing required fields');
       return res.status(400).json({
         message: 'Missing required fields',
-        requiredFields: ['firstName', 'email', 'contactNumber', 'fees', 'address']
+        requiredFields: ['name', 'email', 'mobileNo', 'fees', 'address']
       });
     }
 
     // Create new student document
     const student = new Student({
-      firstName,
-      lastName: lastName || '',
+      name,
       email,
-      contactNumber,
       college: college || '',
       department: department || '',
+      mobileNo: mobileNo || '',
       fees: Number(fees),
-      address
+      address,
+      course,
+      linkedinUrl: linkedinUrl || '',
+      githubUrl: githubUrl || '',
+      batch,
+      year,
+      month
     });
 
     console.log('Created student model, attempting to save:', student);
@@ -217,30 +229,24 @@ router.post('/students/add', async (req, res) => {
     console.log('Received student data:', JSON.stringify(req.body, null, 2));
     
     const { 
-      firstName, 
-      lastName, 
-      email, 
-      college = '',
-      department = '',
-      contactNumber = '', 
-      fees = 0,
-      address = '',
-      course = 'networking', 
-      year = '2025', 
-      month = 'January', 
-      batch = 'Batch 1' 
+      name,
+      email,
+      college,
+      department,
+      mobileNo,
+      course,
+      linkedinUrl,
+      githubUrl,
+      batch,
+      year,
+      month
     } = req.body;
 
     // Validate required fields
-    if (!firstName || !lastName || !email) {
-      console.log('Missing required fields:', { firstName, lastName, email });
-      return res.status(400).json({ 
+    if (!name || !email) {
+      return res.status(400).json({
         message: 'Missing required fields',
-        missingFields: [
-          ...(!firstName ? ['firstName'] : []),
-          ...(!lastName ? ['lastName'] : []),
-          ...(!email ? ['email'] : [])
-        ]
+        requiredFields: ['name', 'email']
       });
     }
 
@@ -255,34 +261,32 @@ router.post('/students/add', async (req, res) => {
     }
 
     console.log('Creating new student with data:', {
-      firstName,
-      lastName,
+      name,
       email,
       college,
       department,
-      contactNumber,
-      fees,
-      address,
+      mobileNo,
       course,
+      linkedinUrl,
+      githubUrl,
+      batch,
       year,
-      month,
-      batch
+      month
     });
 
     // Create new student
     const newStudent = new Student({
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
+      name,
       email: email.toLowerCase().trim(),
       college: college.trim(),
       department: department.trim(),
-      contactNumber: contactNumber ? contactNumber.trim() : '',
-      fees: parseFloat(fees) || 0,
-      address: address.trim(),
+      mobileNo: mobileNo ? mobileNo.trim() : '',
       course: course.trim(),
+      linkedinUrl: linkedinUrl ? linkedinUrl.trim() : '',
+      githubUrl: githubUrl ? githubUrl.trim() : '',
+      batch: batch.trim(),
       year: year.trim(),
-      month: month.trim(),
-      batch: batch.trim()
+      month: month.trim()
     });
 
     console.log('Attempting to save student:', newStudent.toObject());
@@ -329,7 +333,7 @@ router.delete('/students/:id', async (req, res) => {
       message: 'Student deleted successfully',
       student: {
         _id: deletedStudent._id,
-        firstName: deletedStudent.firstName,
+        name: deletedStudent.name,
         email: deletedStudent.email
       }
     });
@@ -430,7 +434,7 @@ router.post('/students/add-to-dynamic-collection', async (req, res) => {
       message: 'Student added to collection successfully',
       entry: {
         _id: newEntry._id,
-        student: studentRef.firstName + ' ' + studentRef.lastName,
+        student: studentRef.name,
         course: courseRef.name,
         year,
         month: monthRef.name,
@@ -678,23 +682,23 @@ router.get('/students', async (req, res) => {
       batch: batchRef._id
     }).populate({
       path: 'student',
-      select: 'firstName lastName email contactNumber' // Select specific fields
+      select: 'name email mobileNo' // Select specific fields
     });
 
     console.log('Students in Collection:', {
       count: studentsInCollection.length,
       details: studentsInCollection.map(entry => ({
         studentId: entry.student._id,
-        firstName: entry.student.firstName,
-        lastName: entry.student.lastName
+        name: entry.student.name
       }))
     });
 
     // Transform the results to include full student details
     const students = studentsInCollection.map(entry => ({
       studentId: entry.student._id,
-      name: `${entry.student.firstName} ${entry.student.lastName}`,
+      name: entry.student.name,
       email: entry.student.email,
+      mobileNo: entry.student.mobileNo,
       course: courseRef.name,
       batch: batchRef.name,
       year: entry.year,
@@ -885,8 +889,7 @@ router.get('/students/list', async (req, res) => {
       count: studentsInCollection.length,
       details: studentsInCollection.map(entry => ({
         studentId: entry.student._id,
-        firstName: entry.student.firstName,
-        lastName: entry.student.lastName
+        name: entry.student.name
       }))
     });
 
@@ -1109,10 +1112,9 @@ router.get('/debug-references', async (req, res) => {
 router.post('/students/google-form', async (req, res) => {
   try {
     const {
-      firstName,
-      lastName,
+      name,
       email,
-      contactNumber,
+      mobileNo,
       college,
       department,
       fees,
@@ -1124,7 +1126,7 @@ router.post('/students/google-form', async (req, res) => {
     } = req.body;
 
     // Validate required fields
-    if (!firstName || !email || !contactNumber || !college || !department || !fees || !address || !batch || !course || !year || !month) {
+    if (!name || !email || !mobileNo || !college || !department || !fees || !address || !batch || !course || !year || !month) {
       return res.status(400).json({
         success: false,
         message: 'All required fields must be provided'
@@ -1142,10 +1144,9 @@ router.post('/students/google-form', async (req, res) => {
 
     // Create new student
     const student = new Student({
-      firstName,
-      lastName,
+      name,
       email,
-      contactNumber,
+      mobileNo,
       college,
       department,
       fees,
@@ -1209,10 +1210,9 @@ router.post('/students/google-form', async (req, res) => {
 router.post('/students/create', async (req, res) => {
   try {
     const {
-      firstName,
-      lastName,
+      name,
       email,
-      contactNumber,
+      mobileNo,
       college,
       department,
       fees,
@@ -1225,10 +1225,9 @@ router.post('/students/create', async (req, res) => {
 
     // Create new student
     const student = new Student({
-      firstName,
-      lastName: lastName || '',
+      name,
       email,
-      contactNumber,
+      mobileNo,
       college,
       department,
       fees: Number(fees),

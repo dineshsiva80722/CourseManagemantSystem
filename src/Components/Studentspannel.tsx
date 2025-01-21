@@ -12,18 +12,17 @@ interface StudentPannelProps {
 
 interface Student {
   _id: string;
-  firstName: string;
-  lastName: string;
+  name: string;
   email: string;
-  contactNumber: string;
   college: string;
   department: string;
-  fees: number;
-  address: string;
+  mobileNo: string;
   course: string;
-  batch: string;
-  year: string;
-  month: string;
+  batch?: string;
+  linkedinUrl?: string;
+  githubUrl?: string;
+  year?: string;
+  month?: string;
 }
 
 const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
@@ -50,14 +49,13 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
   }
 
   const [showModal, setShowModal] = useState(false);
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [college, setCollege] = useState('');
   const [department, setDepartment] = useState('');
-  const [contactNumber, setContactNumber] = useState('');
-  const [fees, setFees] = useState('');
-  const [address, setAddress] = useState('');
+  const [mobileNo, setMobileNo] = useState('');
+  const [linkedinUrl, setLinkedinUrl] = useState('');
+  const [githubUrl, setGithubUrl] = useState('');
   const [batchStudents, setBatchStudents] = useState<{ [batchName: string]: any[] }>({});
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -251,11 +249,8 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     switch (name) {
-      case 'firstName':
-        setFirstName(value);
-        break;
-      case 'lastName':
-        setLastName(value);
+      case 'name':
+        setName(value);
         break;
       case 'email':
         setEmail(value);
@@ -266,14 +261,14 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
       case 'department':
         setDepartment(value);
         break;
-      case 'contactNumber':
-        setContactNumber(value);
+      case 'mobileNo':
+        setMobileNo(value);
         break;
-      case 'fees':
-        setFees(value);
+      case 'linkedinUrl':
+        setLinkedinUrl(value);
         break;
-      case 'address':
-        setAddress(value);
+      case 'githubUrl':
+        setGithubUrl(value);
         break;
       default:
         break;
@@ -290,20 +285,19 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
       }
 
       // Validate required fields
-      if (!firstName.trim() || !lastName.trim() || !email.trim()) {
-        throw new Error('First Name, Last Name, and Email are required fields.');
+      if (!name.trim() || !email.trim()) {
+        throw new Error('Name and Email are required fields.');
       }
 
       // Prepare student data
       const submissionData = {
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
+        name: name.trim(),
         email: email.trim(),
         college: college.trim(),
         department: department.trim(),
-        contactNumber: contactNumber.trim(),
-        fees: parseFloat(fees) || 0,
-        address: address.trim(),
+        mobileNo: mobileNo.trim(),
+        linkedinUrl: linkedinUrl.trim(),
+        githubUrl: githubUrl.trim(),
         course: typeof course === 'string'
           ? course
           : (course?.name || course?.course || 'networking'),
@@ -338,20 +332,19 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
       setBatchStudents(updatedStudentsByBatch);
 
       // Reset form fields
-      setFirstName('');
-      setLastName('');
+      setName('');
       setEmail('');
       setCollege('');
       setDepartment('');
-      setContactNumber('');
-      setFees('');
-      setAddress('');
+      setMobileNo('');
+      setLinkedinUrl('');
+      setGithubUrl('');
 
       // Close modal
       setShowModal(false);
 
       // Show success message
-      setSuccess(`Student ${newStudent.firstName} ${newStudent.lastName} added successfully!`);
+      setSuccess(`Student ${newStudent.name} added successfully!`);
     } catch (error: any) {
       console.error('Complete Error Object:', error);
 
@@ -429,6 +422,14 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
     }
   };
 
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+
+  const handleShowDetails = (student: Student) => {
+    setSelectedStudent(student);
+    setShowDetailsModal(true);
+  };
+
   // Render students by batch with new fields and total count
   const renderStudentsByBatch = () => {
     return Object.entries(batchStudents).map(([batchName, students]) => (
@@ -446,9 +447,7 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
                 <th className="px-4 py-2 border border-gray-300 text-left text-sm font-medium text-gray-700">College</th>
                 <th className="px-4 py-2 border border-gray-300 text-left text-sm font-medium text-gray-700">Department</th>
                 <th className="px-4 py-2 border border-gray-300 text-left text-sm font-medium text-gray-700">Phone No</th>
-                <th className="px-4 py-2 border border-gray-300 text-left text-sm font-medium text-gray-700">Fees</th>
                 <th className="px-4 py-2 border border-gray-300 text-left text-sm font-medium text-gray-700">Course</th>
-                <th className="px-4 py-2 border border-gray-300 text-left text-sm font-medium text-gray-700">Address</th>
                 <th className="px-4 py-2 border border-gray-300 text-left text-sm font-medium text-gray-700">Actions</th>
               </tr>
             </thead>
@@ -458,22 +457,29 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
                   key={student._id}
                   className="hover:bg-gray-50 even:bg-gray-100 odd:bg-white text-sm"
                 >
-                  <td className="px-4 py-2 border border-gray-300 whitespace-nowrap">{student.firstName} {student.lastName}</td>
+                  <td className="px-4 py-2 border border-gray-300 whitespace-nowrap">{student.name}</td>
                   <td className="px-4 py-2 border border-gray-300 whitespace-nowrap">{student.email}</td>
                   <td className="px-4 py-2 border border-gray-300 whitespace-nowrap">{student.college}</td>
                   <td className="px-4 py-2 border border-gray-300 whitespace-nowrap">{student.department}</td>
-                  <td className="px-4 py-2 border border-gray-300 whitespace-nowrap">{student.contactNumber}</td>
-                  <td className="px-4 py-2 border border-gray-300 whitespace-nowrap">{student.fees}</td>
+                  <td className="px-4 py-2 border border-gray-300 whitespace-nowrap">{student.mobileNo}</td>
                   <td className="px-4 py-2 border border-gray-300 whitespace-nowrap">{student.course}</td>
-                  <td className="px-4 py-2 border border-gray-300 whitespace-nowrap">{student.address}</td>
                   <td className="px-4 py-2 border border-gray-300 whitespace-nowrap">
-                    <button
-                      onClick={() => handleDeleteStudent(student._id)}
-                      className="bg-red-500 hover:bg-red-600 text-white text-xs font-medium px-3 py-1 rounded"
-                      title="Delete Student"
-                    >
-                      <i className="bi bi-trash"></i> Delete
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleShowDetails(student)}
+                        className="bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium px-3 py-1 rounded"
+                        title="View Details"
+                      >
+                        <i className="bi bi-eye"></i> Details
+                      </button>
+                      <button
+                        onClick={() => handleDeleteStudent(student._id)}
+                        className="bg-red-500 hover:bg-red-600 text-white text-xs font-medium px-3 py-1 rounded"
+                        title="Delete Student"
+                      >
+                        <i className="bi bi-trash"></i> Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -487,48 +493,121 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
                 key={student._id}
                 className="border border-gray-300 bg-white p-4 mb-4 rounded shadow"
               >
-                <p className="text-sm font-medium text-gray-700">
-                  <span className="font-bold">Name: </span>
-                  {student.firstName} {student.lastName}
-                </p>
-                <p className="text-sm font-medium text-gray-700">
-                  <span className="font-bold">Email: </span>
-                  {student.email}
-                </p>
-                <p className="text-sm font-medium text-gray-700">
-                  <span className="font-bold">College: </span>
-                  {student.college}
-                </p>
-                <p className="text-sm font-medium text-gray-700">
-                  <span className="font-bold">Department: </span>
-                  {student.department}
-                </p>
-                <p className="text-sm font-medium text-gray-700">
-                  <span className="font-bold">Phone No: </span>
-                  {student.contactNumber}
-                </p>
-                <p className="text-sm font-medium text-gray-700">
-                  <span className="font-bold">Fees: </span>
-                  {student.fees}
-                </p>
-                <p className="text-sm font-medium text-gray-700">
-                  <span className="font-bold">Course: </span>
-                  {student.course}
-                </p>
-                <p className="text-sm font-medium text-gray-700">
-                  <span className="font-bold">Address: </span>
-                  {student.address}
-                </p>
-                <button
-                  onClick={() => handleDeleteStudent(student._id)}
-                  className="mt-2 bg-red-500 hover:bg-red-600 text-white text-xs font-medium px-3 py-1 rounded"
-                  title="Delete Student"
-                >
-                  <i className="bi bi-trash"></i> Delete
-                </button>
+                <div className="grid grid-cols-1 gap-2">
+                  <p className="text-sm font-medium text-gray-700">
+                    <span className="font-bold">Name: </span>
+                    {student.name}
+                  </p>
+                  <p className="text-sm font-medium text-gray-700">
+                    <span className="font-bold">Email: </span>
+                    {student.email}
+                  </p>
+                  <p className="text-sm font-medium text-gray-700">
+                    <span className="font-bold">College: </span>
+                    {student.college}
+                  </p>
+                  <p className="text-sm font-medium text-gray-700">
+                    <span className="font-bold">Department: </span>
+                    {student.department}
+                  </p>
+                  <p className="text-sm font-medium text-gray-700">
+                    <span className="font-bold">Phone No: </span>
+                    {student.mobileNo}
+                  </p>
+                  <p className="text-sm font-medium text-gray-700">
+                    <span className="font-bold">Course: </span>
+                    {student.course}
+                  </p>
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={() => handleShowDetails(student)}
+                      className="bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium px-3 py-1 rounded flex-1"
+                      title="View Details"
+                    >
+                      <i className="bi bi-eye"></i> View Details
+                    </button>
+                    <button
+                      onClick={() => handleDeleteStudent(student._id)}
+                      className="bg-red-500 hover:bg-red-600 text-white text-xs font-medium px-3 py-1 rounded flex-1"
+                      title="Delete Student"
+                    >
+                      <i className="bi bi-trash"></i> Delete
+                    </button>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
+
+          {/* Student Details Modal */}
+          <Modal show={showDetailsModal} onHide={() => setShowDetailsModal(false)}>
+            <Modal.Header closeButton>
+              <Modal.Title>Student Details</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+              {selectedStudent && (
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="border-b pb-2">
+                    <h3 className="text-lg font-semibold mb-2">Personal Information</h3>
+                    <p><span className="font-bold">Name:</span> {selectedStudent.name}</p>
+                    <p><span className="font-bold">Email:</span> {selectedStudent.email}</p>
+                       
+                    <p><span className="font-bold">Phone No:</span> {selectedStudent.mobileNo}</p>
+                  </div>
+                  
+                  <div className="border-b pb-2">
+                    <h3 className="text-lg font-semibold mb-2">Academic Information</h3>
+                    <p><span className="font-bold">College:</span> {selectedStudent.college}</p>
+                    <p><span className="font-bold">Department:</span> {selectedStudent.department}</p>
+                    <p><span className="font-bold">Course:</span> {selectedStudent.course}</p>
+                    <p><span className="font-bold">Batch:</span> {selectedStudent.batch}</p>
+                      <p><span className="font-bold">Year:</span> {selectedStudent.year}</p>
+                      <p><span className="font-bold">Month:</span> {selectedStudent.month}</p>
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Social Links</h3>
+                    {selectedStudent.linkedinUrl ? (
+                      <p>
+                        <span className="font-bold">LinkedIn:</span>{' '}
+                        <a 
+                          href={selectedStudent.linkedinUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          View Link <i className="bi bi-box-arrow-up-right text-xs"></i>
+                        </a>
+                      </p>
+                    ) : (
+                      <p className="text-gray-500">No LinkedIn profile provided</p>
+                    )}
+                    
+                    {selectedStudent.githubUrl ? (
+                      <p>
+                        <span className="font-bold">GitHub:</span>{' '}
+                        <a 
+                          href={selectedStudent.githubUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          View Link <i className="bi bi-box-arrow-up-right text-xs"></i>
+                        </a>
+                      </p>
+                    ) : (
+                      <p className="text-gray-500">No GitHub profile provided</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </Modal.Body>
+            <Modal.Footer>
+              <Button variant="secondary" onClick={() => setShowDetailsModal(false)}>
+                Close
+              </Button>
+            </Modal.Footer>
+          </Modal>
         </div>
       </div>
     ));
@@ -546,17 +625,15 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
 
     // Prepare data for Excel export with selected fields
     const exportData = allStudents.map(student => ({
-      'First Name': student.firstName,
-      'Last Name': student.lastName,
+      'Name': student.name,
       'Email': student.email,
-      'Contact Number': student.contactNumber,
       'College': student.college,
       'Department': student.department,
+      'Mobile No': student.mobileNo,
       'Course': student.course,
       'Batch': student.batch,
       'Year': student.year,
-      'Month': student.month,
-      'Fees': student.fees
+      'Month': student.month
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
@@ -648,21 +725,11 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
         <Modal.Body>
           <Form onSubmit={handleSubmit}>
             <Form.Group className="mb-3">
-              <Form.Label>First Name</Form.Label>
+              <Form.Label>Name</Form.Label>
               <Form.Control
                 type="text"
-                name="firstName"
-                value={firstName}
-                onChange={handleInputChange}
-                required
-              />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Last Name</Form.Label>
-              <Form.Control
-                type="text"
-                name="lastName"
-                value={lastName}
+                name="name"
+                value={name}
                 onChange={handleInputChange}
                 required
               />
@@ -696,29 +763,29 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
               />
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Contact Number</Form.Label>
+              <Form.Label>Mobile No</Form.Label>
               <Form.Control
                 type="tel"
-                name="contactNumber"
-                value={contactNumber}
+                name="mobileNo"
+                value={mobileNo}
                 onChange={handleInputChange}
               />
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Fees</Form.Label>
-              <Form.Control
-                type="number"
-                name="fees"
-                value={fees}
-                onChange={handleInputChange}
-              />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Address</Form.Label>
+              <Form.Label>LinkedIn URL</Form.Label>
               <Form.Control
                 type="text"
-                name="address"
-                value={address}
+                name="linkedinUrl"
+                value={linkedinUrl}
+                onChange={handleInputChange}
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>GitHub URL</Form.Label>
+              <Form.Control
+                type="text"
+                name="githubUrl"
+                value={githubUrl}
                 onChange={handleInputChange}
               />
             </Form.Group>

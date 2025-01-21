@@ -65,7 +65,7 @@ const App = () => {
 
   const handleDeleteCourse = async (courseId) => {
     try {
-      console.log('Attempting to delete course with ID:', courseId);
+      // console.log('Attempting to delete course with ID:', courseId);
       const response = await axios.delete(`http://localhost:5000/api/courses/delete/${courseId}`, {
         headers: {
           'Content-Type': 'application/json'
