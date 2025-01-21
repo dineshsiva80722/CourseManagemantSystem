@@ -5,20 +5,20 @@ import axios from 'axios';
 interface AddStudentFormProps {
   batchId: string;
   course: string | { name?: string; course?: string };
-  year: string;
-  month: string;
+  name?: string;
+  year: string | { year?: string; name?: string };
+  month: string | { name?: string };
 }
 
 const AddStudentForm: React.FC<AddStudentFormProps> = ({ batchId, course, year, month }) => {
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
+    name: '',
     email: '',
-    contactNumber: '',
     college: '',
     department: '',
-    fees: '',
-    address: ''
+    mobileNo: '',
+    linkedinUrl: '',
+    githubUrl: ''
   });
 
   const [error, setError] = useState<string | null>(null);
@@ -34,80 +34,109 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ batchId, course, year, 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
     
     try {
       // Validate required fields
-      if (!formData.firstName || !formData.email || !formData.contactNumber || !formData.fees || !formData.address) {
-        setError('Please fill in all required fields');
-        return;
+      if (!formData.name || !formData.email) {
+        throw new Error('Name and Email are required fields.');
       }
 
-      // console.log('Submitting student data:', {
-      //   ...formData,
-      //   course,
-      //   year,
-      //   month,
-      //   batch: batchId
-      // });
+      // Prepare student data
+      const submissionData = {
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        college: formData.college?.trim() || '',
+        department: formData.department?.trim() || '',
+        mobileNo: formData.mobileNo?.trim() || '',
+        course: typeof course === 'string'
+          ? course
+          : (course?.name || course?.course || 'networking'),
+        batch: batchId || 'Batch 1',
+        linkedinUrl: formData.linkedinUrl?.trim() || '', // Optional field
+        githubUrl: formData.githubUrl?.trim() || '', // Optional field
+        year: typeof year === 'string'
+          ? year
+          : (year.year || (year.name && parseInt(year.name, 10).toString()) || '2025'),
+        month: typeof month === 'string'
+          ? month
+          : (month?.name || 'January'),
+        fees: 0
+      };
 
-      // First create the student
-      const studentResponse = await axios.post('http://localhost:5000/api/students/add', {
-        firstName: formData.firstName,
-        lastName: formData.lastName || '',
-        email: formData.email,
-        contactNumber: formData.contactNumber,
-        college: formData.college || '',
-        department: formData.department || '',
-        fees: Number(formData.fees),
-        address: formData.address,
-        course: typeof course === 'object' ? course.name || course.course || 'web development' : course,
-        year,
-        month,
-        batch: batchId
+      // Send request to add student
+      const response = await axios.post('http://localhost:5000/api/students/add', submissionData, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
 
-
-      // console.log('Server response:', studentResponse.data);
-      // console.log('Request payload:', {
-      //   firstName: formData.firstName,
-      //   lastName: formData.lastName || '',
-      //   email: formData.email,
-      //   contactNumber: formData.contactNumber,
-      //   college: formData.college || '',
-      //   department: formData.department || '',
-      //   fees: Number(formData.fees),
-      //   address: formData.address,
-      //   course: typeof course === 'object' ? course.name || course.course || 'web development' : course,
-      //   year,
-      //   month,
-      //   batch: batchId,
-      // });
-      
-
-      setSuccess(true);
-      setError(null);
-      
-      // Clear form for next entry
+      // Reset form
       setFormData({
-        firstName: '',
-        lastName: '',
+        name: '',
         email: '',
-        contactNumber: '',
         college: '',
         department: '',
-        fees: '',
-        address: ''
+        mobileNo: '',
+        linkedinUrl: '',
+        githubUrl: ''
       });
+
+      // Set success state
+      setSuccess(true);
+      setError(null);
 
       // Clear success message after 3 seconds
       setTimeout(() => {
         setSuccess(false);
       }, 3000);
 
-    } catch (err: any) {
-      console.error('Error adding student:', err);
-      setError(err.response?.data?.message || 'Error adding student');
+    } catch (error: any) {
+      console.error('Complete Error Object:', error);
+
+      // Prepare error message
+      let errorMessage = 'Failed to add student.';
+
+      if (error.response) {
+        // Server responded with an error
+        console.error('Server Response Error:', {
+          status: error.response.status,
+          data: error.response.data,
+          headers: error.response.headers
+        });
+
+        switch (error.response.status) {
+          case 500:
+            errorMessage = 'Internal Server Error. Please try again later.';
+            // Log full error details for debugging
+            console.error('Detailed Server Error:', {
+              message: error.response.data.message,
+              error: error.response.data.error,
+              stack: error.response.data.stack
+            });
+            break;
+          case 409:
+            errorMessage = `A student with email ${formData.email} already exists.`;
+            break;
+          case 400:
+            errorMessage = error.response.data.message ||
+              'Invalid student data. Please check your inputs.';
+            break;
+          default:
+            errorMessage = error.response.data.message ||
+              'Unexpected server error occurred.';
+        }
+      } else if (error.request) {
+        // Request made but no response received
+        errorMessage = 'No response from server. Please check your connection.';
+        console.error('Request Error:', error.request);
+      } else {
+        // Error in setting up the request
+        errorMessage = error.message || 'An unexpected error occurred.';
+        console.error('Error Message:', error.message);
+      }
+
+      // Set error state
+      setError(errorMessage);
       setSuccess(false);
     }
   };
@@ -116,7 +145,7 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ batchId, course, year, 
     <Container className="py-4" style={{ maxWidth: '600px' }}>
       <h4 className="mb-4">Add New Student</h4>
       <div className="mb-4">
-        <strong>Course:</strong> {typeof course === 'object' ? course.name || course.course || 'web development' : course} | <strong>Batch:</strong> {batchId} | <strong>Year:</strong> {year} | <strong>Month:</strong> {month}
+        <strong>Course:</strong> {typeof course === 'object' ? String(course.name || course.course || 'web development') : String(course)} | <strong>Batch:</strong> {String(batchId)} | <strong>Year:</strong> {typeof year === 'object' ? String(year.year || year.name || 'N/A') : String(year)} | <strong>Month:</strong> {String(month)}
       </div>
       
       {error && (
@@ -132,23 +161,13 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ batchId, course, year, 
 
       <Form onSubmit={handleSubmit}>
         <Form.Group className="mb-3">
-          <Form.Label>First Name</Form.Label>
+          <Form.Label>Name</Form.Label>
           <Form.Control
             type="text"
-            name="firstName"
-            value={formData.firstName}
+            name="name"
+            value={formData.name}
             onChange={handleChange}
             required
-          />
-        </Form.Group>
-
-        <Form.Group className="mb-3">
-          <Form.Label>Last Name</Form.Label>
-          <Form.Control
-            type="text"
-            name="lastName"
-            value={formData.lastName}
-            onChange={handleChange}
           />
         </Form.Group>
 
@@ -170,7 +189,6 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ batchId, course, year, 
             name="college"
             value={formData.college}
             onChange={handleChange}
-            required
           />
         </Form.Group>
 
@@ -181,40 +199,36 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ batchId, course, year, 
             name="department"
             value={formData.department}
             onChange={handleChange}
-            required
           />
         </Form.Group>
 
         <Form.Group className="mb-3">
-          <Form.Label>Contact Number</Form.Label>
+          <Form.Label>Mobile Number</Form.Label>
           <Form.Control
             type="tel"
-            name="contactNumber"
-            value={formData.contactNumber}
+            name="mobileNo"
+            value={formData.mobileNo}
             onChange={handleChange}
-            required
           />
         </Form.Group>
 
         <Form.Group className="mb-3">
-          <Form.Label>Fees</Form.Label>
+          <Form.Label>LinkedIn URL (Optional)</Form.Label>
           <Form.Control
-            type="number"
-            name="fees"
-            value={formData.fees}
+            type="url"
+            name="linkedinUrl"
+            value={formData.linkedinUrl}
             onChange={handleChange}
-            required
           />
         </Form.Group>
 
         <Form.Group className="mb-3">
-          <Form.Label>Address</Form.Label>
+          <Form.Label>GitHub URL (Optional)</Form.Label>
           <Form.Control
-            type="text"
-            name="address"
-            value={formData.address}
+            type="url"
+            name="githubUrl"
+            value={formData.githubUrl}
             onChange={handleChange}
-            required
           />
         </Form.Group>
 

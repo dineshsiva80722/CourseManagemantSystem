@@ -110,7 +110,8 @@ router.get('/students', async (req, res) => {
         githubUrl: student.githubUrl,
         batch: student.batch,
         month: student.month,
-        year: student.year
+        year: student.year,
+        fees: student.fees || 0
       })),
       count: students.length 
     });
@@ -1284,6 +1285,111 @@ router.get('/students', async (req, res) => {
       success: false,
       message: 'Error fetching students',
       error: error.message
+    });
+  }
+});
+
+// Get individual student details
+router.get('/students/:studentId', async (req, res) => {
+  try {
+    const { studentId } = req.params;
+
+    // Validate input
+    if (!studentId) {
+      return res.status(400).json({ message: 'Student ID is required' });
+    }
+
+    // Find the student by ID
+    const student = await Student.findById(studentId);
+
+    // Check if student exists
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+
+    // Return student details
+    res.json({
+      _id: student._id,
+      name: student.name,
+      email: student.email,
+      fees: student.fees,
+      // Add other relevant fields as needed
+    });
+  } catch (error) {
+    console.error('Error fetching student details:', {
+      studentId: req.params.studentId,
+      errorMessage: error.message,
+      stack: error.stack
+    });
+
+    res.status(500).json({ 
+      message: 'Server error fetching student details', 
+      error: error.message 
+    });
+  }
+});
+
+// Update student fees
+router.put('/students/updateFees/:studentId', async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const { fees } = req.body;
+
+    console.log('Received updateFees request:', {
+      studentId,
+      fees,
+      requestBody: req.body
+    });
+
+    // Validate input
+    if (!studentId || fees === undefined) {
+      console.error('Invalid input for updateFees', { studentId, fees });
+      return res.status(400).json({ message: 'Student ID and fees are required' });
+    }
+
+    // Find the student first to log additional details
+    const existingStudent = await Student.findById(studentId);
+    if (!existingStudent) {
+      console.error('Student not found', { studentId });
+      return res.status(404).json({ message: 'Student not found' });
+    }
+
+    console.log('Existing student before update:', {
+      currentFees: existingStudent.fees,
+      studentName: existingStudent.name
+    });
+
+    // Find and update the student
+    const updatedStudent = await Student.findByIdAndUpdate(
+      studentId, 
+      { fees: Number(fees) }, 
+      { 
+        new: true, // Return the updated document
+        runValidators: true // Run model validations
+      }
+    );
+
+    console.log('Updated student:', {
+      updatedFees: updatedStudent.fees,
+      studentName: updatedStudent.name
+    });
+
+    if (!updatedStudent) {
+      console.error('Update failed', { studentId, fees });
+      return res.status(500).json({ message: 'Failed to update student fees' });
+    }
+
+    res.json(updatedStudent);
+  } catch (error) {
+    console.error('Error in updateFees route:', {
+      message: error.message,
+      stack: error.stack,
+      studentId: req.params.studentId,
+      fees: req.body.fees
+    });
+    res.status(500).json({ 
+      message: 'Server error updating fees', 
+      error: error.message 
     });
   }
 });

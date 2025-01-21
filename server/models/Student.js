@@ -28,6 +28,11 @@ const StudentSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Course is required']
   },
+  fees: {
+    type: Number,
+    default: 0,
+    min: [0, 'Fees cannot be negative']
+  },
   linkedinUrl: {
     type: String,
     trim: true

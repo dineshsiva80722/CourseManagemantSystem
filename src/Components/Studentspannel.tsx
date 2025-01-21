@@ -5,6 +5,10 @@ import axios from 'axios';
 import StudentList from '../Components/StudentList';
 import { fetchCourses, fetchBatches, fetchMonths } from '../utils/fetchOptions';
 import * as XLSX from 'xlsx';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
+
 
 interface StudentPannelProps {
   batchId?: string;
@@ -23,6 +27,7 @@ interface Student {
   githubUrl?: string;
   year?: string;
   month?: string;
+  fees?: number;
 }
 
 const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
@@ -65,6 +70,10 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
   const [availableCourses, setAvailableCourses] = useState([]);
   const [availableBatches, setAvailableBatches] = useState([]);
   const [availableMonths, setAvailableMonths] = useState([]);
+
+  // State for editing fees
+  const [editingFees, setEditingFees] = useState<{ [studentId: string]: boolean }>({});
+  const [newFees, setNewFees] = useState<{ [studentId: string]: number }>({});
 
   // Fetch students when component mounts or when key parameters change
   useEffect(() => {
@@ -126,7 +135,14 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
           if (!acc[batchName]) {
             acc[batchName] = [];
           }
-          acc[batchName].push(student);
+
+          // Ensure fees is always a number and from the database
+          const studentWithFees = {
+            ...student,
+            fees: student.fees !== undefined ? Number(student.fees) : 0
+          };
+
+          acc[batchName].push(studentWithFees);
           return acc;
         }, {} as { [batchName: string]: any[] });
 
@@ -430,7 +446,69 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
     setShowDetailsModal(true);
   };
 
-  // Render students by batch with new fields and total count
+  const handleUpdateFees = async (studentId: string) => {
+    try {
+      const feesToUpdate = newFees[studentId];
+
+      // Validate fees
+      if (feesToUpdate === undefined || feesToUpdate === null) {
+        toast.error('Invalid fees amount');
+        return;
+      }
+
+      console.log('Updating fees for student:', {
+        studentId,
+        fees: feesToUpdate
+      });
+
+      const response = await axios.put(`http://localhost:5000/api/students/updateFees/${studentId}`, {
+        fees: Number(feesToUpdate)
+      }, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      // Use the server response to update the local state
+      const updatedStudent = response.data;
+
+      // Update batchStudents state to reflect the new fees
+      setBatchStudents(prevBatchStudents => {
+        const updatedBatchStudents = { ...prevBatchStudents };
+
+        // Iterate through each batch
+        Object.keys(updatedBatchStudents).forEach(batchName => {
+          const studentIndex = updatedBatchStudents[batchName].findIndex(
+            student => student._id === studentId
+          );
+
+          // If student found, update their fees
+          if (studentIndex !== -1) {
+            updatedBatchStudents[batchName][studentIndex] = {
+              ...updatedBatchStudents[batchName][studentIndex],
+              fees: updatedStudent.fees
+            };
+          }
+        });
+
+        return updatedBatchStudents;
+      });
+
+      // Reset editing state and clear new fees for this student
+      setEditingFees(prev => ({ ...prev, [studentId]: false }));
+      setNewFees(prev => {
+        const updatedNewFees = { ...prev };
+        delete updatedNewFees[studentId];
+        return updatedNewFees;
+      });
+
+      toast.success('Fees updated successfully');
+    } catch (error) {
+      console.error('Error updating fees:', error);
+      toast.error('Failed to update fees');
+    }
+  };
+
   const renderStudentsByBatch = () => {
     return Object.entries(batchStudents).map(([batchName, students]) => (
       <div key={batchName} className="batch-students-container mb-4">
@@ -442,13 +520,30 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
           <table className="students-table w-full border-collapse border border-gray-300 bg-white hidden lg:table">
             <thead className="bg-gray-100">
               <tr>
-                <th className="px-4 py-2 border border-gray-300 text-left text-sm font-medium text-gray-700">Name</th>
-                <th className="px-4 py-2 border border-gray-300 text-left text-sm font-medium text-gray-700">Email</th>
-                <th className="px-4 py-2 border border-gray-300 text-left text-sm font-medium text-gray-700">College</th>
-                <th className="px-4 py-2 border border-gray-300 text-left text-sm font-medium text-gray-700">Department</th>
-                <th className="px-4 py-2 border border-gray-300 text-left text-sm font-medium text-gray-700">Phone No</th>
-                <th className="px-4 py-2 border border-gray-300 text-left text-sm font-medium text-gray-700">Course</th>
-                <th className="px-4 py-2 border border-gray-300 text-left text-sm font-medium text-gray-700">Actions</th>
+                <th className="px-4 py-2 border-b-2 border-blue-500 bg-blue-50 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">
+                  Name
+                </th>
+                <th className="px-4 py-2 border-b-2 border-blue-500 bg-blue-50 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">
+                  Email
+                </th>
+                <th className="px-4 py-2 border-b-2 border-blue-500 bg-blue-50 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">
+                  College
+                </th>
+                <th className="px-4 py-2 border-b-2 border-blue-500 bg-blue-50 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">
+                  Department
+                </th>
+                <th className="px-4 py-2 border-b-2 border-blue-500 bg-blue-50 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">
+                  Phone No
+                </th>
+                <th className="px-4 py-2 border-b-2 border-blue-500 bg-blue-50 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">
+                  Course
+                </th>
+                <th className="px-4 py-2 border-b-2 border-blue-500 bg-blue-50 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">
+                  Fees
+                </th>
+                <th className="px-4 py-2 border-b-2 border-blue-500 bg-blue-50 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -463,6 +558,57 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
                   <td className="px-4 py-2 border border-gray-300 whitespace-nowrap">{student.department}</td>
                   <td className="px-4 py-2 border border-gray-300 whitespace-nowrap">{student.mobileNo}</td>
                   <td className="px-4 py-2 border border-gray-300 whitespace-nowrap">{student.course}</td>
+                  <td className="px-4 py-2 border border-gray-300 whitespace-nowrap">
+
+                    {editingFees[student._id] ? (
+                      <div className="flex items-center">
+                        <input
+                          type="number"
+                          value={newFees[student._id] ?? student.fees ?? 0}
+                          onChange={(e) => setNewFees(prev => ({
+                            ...prev,
+                            [student._id]: Number(e.target.value)
+                          }))}
+                          className="border rounded px-2 py-1 w-24 mr-2"
+                        />
+                        <button
+                          onClick={() => handleUpdateFees(student._id)}
+                          className="bg-green-500 text-white px-2 py-1 rounded text-sm mr-2"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => setEditingFees(prev => ({ ...prev, [student._id]: false }))}
+                          className="bg-gray-500 text-white px-2 py-1 rounded text-sm"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex justify-between items-center">
+                        <h1>
+                          ₹{student.fees ?? 0}
+                        </h1>
+                        <button
+                          onClick={() => {
+                            setNewFees(prev => ({
+                              ...prev,
+                              [student._id]: student.fees ?? 0
+                            }));
+                            setEditingFees(prev => ({ ...prev, [student._id]: true }));
+                          }}
+                          className="ml-2 text-blue-500 hover:text-blue-700"
+                          title="Edit Fees"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                            stroke="currentColor" className="size-6">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                              d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
+                  </td>
                   <td className="px-4 py-2 border border-gray-300 whitespace-nowrap">
                     <div className="flex gap-2">
                       <button
@@ -518,6 +664,51 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
                     <span className="font-bold">Course: </span>
                     {student.course}
                   </p>
+                  <p className="text-sm font-medium text-gray-700">
+                    <span className="font-bold">Fees: </span>
+                    {editingFees[student._id] ? (
+                      <div className="flex items-center">
+                        <input
+                          type="number"
+                          value={newFees[student._id] ?? student.fees ?? 0}
+                          onChange={(e) => setNewFees(prev => ({
+                            ...prev,
+                            [student._id]: Number(e.target.value)
+                          }))}
+                          className="border rounded px-2 py-1 w-24 mr-2"
+                        />
+                        <button
+                          onClick={() => handleUpdateFees(student._id)}
+                          className="bg-green-500 text-white px-2 py-1 rounded text-sm mr-2"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => setEditingFees(prev => ({ ...prev, [student._id]: false }))}
+                          className="bg-gray-500 text-white px-2 py-1 rounded text-sm"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center">
+                        ₹{student.fees ?? 0}
+                        <button
+                          onClick={() => {
+                            setNewFees(prev => ({
+                              ...prev,
+                              [student._id]: student.fees ?? 0
+                            }));
+                            setEditingFees(prev => ({ ...prev, [student._id]: true }));
+                          }}
+                          className="ml-2 text-blue-500 hover:text-blue-700"
+                          title="Edit Fees"
+                        >
+                          <i className="bi bi-pencil-square"></i>
+                        </button>
+                      </div>
+                    )}
+                  </p>
                   <div className="flex gap-2 mt-2">
                     <button
                       onClick={() => handleShowDetails(student)}
@@ -551,18 +742,18 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
                     <h3 className="text-lg font-semibold mb-2">Personal Information</h3>
                     <p><span className="font-bold">Name:</span> {selectedStudent.name}</p>
                     <p><span className="font-bold">Email:</span> {selectedStudent.email}</p>
-                       
+
                     <p><span className="font-bold">Phone No:</span> {selectedStudent.mobileNo}</p>
                   </div>
-                  
+
                   <div className="border-b pb-2">
                     <h3 className="text-lg font-semibold mb-2">Academic Information</h3>
                     <p><span className="font-bold">College:</span> {selectedStudent.college}</p>
                     <p><span className="font-bold">Department:</span> {selectedStudent.department}</p>
                     <p><span className="font-bold">Course:</span> {selectedStudent.course}</p>
                     <p><span className="font-bold">Batch:</span> {selectedStudent.batch}</p>
-                      <p><span className="font-bold">Year:</span> {selectedStudent.year}</p>
-                      <p><span className="font-bold">Month:</span> {selectedStudent.month}</p>
+                    <p><span className="font-bold">Year:</span> {selectedStudent.year}</p>
+                    <p><span className="font-bold">Month:</span> {selectedStudent.month}</p>
                   </div>
 
                   <div>
@@ -570,7 +761,7 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
                     {selectedStudent.linkedinUrl ? (
                       <p>
                         <span className="font-bold">LinkedIn:</span>{' '}
-                        <a 
+                        <a
                           href={selectedStudent.linkedinUrl}
                           target="_blank"
                           rel="noopener noreferrer"
@@ -582,11 +773,11 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
                     ) : (
                       <p className="text-gray-500">No LinkedIn profile provided</p>
                     )}
-                    
+
                     {selectedStudent.githubUrl ? (
                       <p>
                         <span className="font-bold">GitHub:</span>{' '}
-                        <a 
+                        <a
                           href={selectedStudent.githubUrl}
                           target="_blank"
                           rel="noopener noreferrer"
@@ -653,6 +844,7 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
 
   return (
     <Container className="py-4">
+      <ToastContainer />
       <div className="lg:flex justify-content-between align-items-center mb-4">
         <h1 className="lg:text-3xl py-3 font-semibold md:text-2xl text-sm">
           {course?.name || course} ({year}  {month} {batch})
@@ -670,16 +862,16 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
             onClick={handleExportToExcel}
             className="lg:text-lg md:text-md text-sm"
           >
-             <span className='hidden lg:inline'>Export to </span> Excel
-           
+            <span className='hidden lg:inline'>Export to </span> Excel
+
           </Button>
           <Button
             variant="primary"
             onClick={handleAddStudent}
             className="lg:text-lg md:text-md text-sm"
-           
+
           >
-             <span className='hidden lg:inline'>New</span>Tab
+            <span className='hidden lg:inline'>New</span>Tab
           </Button>
         </div>
       </div>
