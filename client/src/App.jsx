@@ -126,7 +126,7 @@ const App = () => {
           <Col md={5}>
             <Form.Control
               type="text"
-              placeholder="Course Description"
+              placeholder="Course Fees"
               value={newCourse.description}
               onChange={(e) => setNewCourse({ ...newCourse, description: e.target.value })}
               required
@@ -180,7 +180,7 @@ const App = () => {
                       Delete
                     </Button>
                   </div>
-                  <Card.Text>{course.description}</Card.Text>
+                  <Card.Text>Fees: {course.description}</Card.Text>
                   <Button variant="primary" className=" absolute align-middle items-center   bottom-0 mx-auto left-0 w-full rounded-none flex justify-between font-bold" onClick={() => navigate('/Mainpannel', { state: { course } })}>
                     <h1 className="font-bold ">View</h1>
                     <div className='rotate-12'>

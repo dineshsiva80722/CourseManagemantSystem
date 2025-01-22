@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Container, Button, Card, Modal, Form, Alert, Table } from 'react-bootstrap';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import StudentList from '../Components/StudentList';
 import { fetchCourses, fetchBatches, fetchMonths } from '../utils/fetchOptions';
 import * as XLSX from 'xlsx';
 import { toast, ToastContainer } from 'react-toastify';
@@ -25,6 +24,8 @@ interface Student {
   batch?: string;
   linkedinUrl?: string;
   githubUrl?: string;
+  portfolioUrl?: string;
+  twitterUrl?: string;
   year?: string;
   month?: string;
   fees?: number;
@@ -54,13 +55,17 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
   }
 
   const [showModal, setShowModal] = useState(false);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [college, setCollege] = useState('');
-  const [department, setDepartment] = useState('');
-  const [mobileNo, setMobileNo] = useState('');
-  const [linkedinUrl, setLinkedinUrl] = useState('');
-  const [githubUrl, setGithubUrl] = useState('');
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    college: '',
+    department: '',
+    mobileNo: '',
+    linkedinUrl: '',
+    githubUrl: '',
+    portfolioUrl: '',
+    twitterUrl: ''
+  });
   const [batchStudents, setBatchStudents] = useState<{ [batchName: string]: any[] }>({});
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -71,9 +76,7 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
   const [availableBatches, setAvailableBatches] = useState([]);
   const [availableMonths, setAvailableMonths] = useState([]);
 
-  // State for editing fees
-  const [editingFees, setEditingFees] = useState<{ [studentId: string]: boolean }>({});
-  const [newFees, setNewFees] = useState<{ [studentId: string]: number }>({});
+  // State for global fees editing
 
   // Fetch students when component mounts or when key parameters change
   useEffect(() => {
@@ -262,38 +265,16 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
     loadOptions();
   }, []);
 
-  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = event.target;
-    switch (name) {
-      case 'name':
-        setName(value);
-        break;
-      case 'email':
-        setEmail(value);
-        break;
-      case 'college':
-        setCollege(value);
-        break;
-      case 'department':
-        setDepartment(value);
-        break;
-      case 'mobileNo':
-        setMobileNo(value);
-        break;
-      case 'linkedinUrl':
-        setLinkedinUrl(value);
-        break;
-      case 'githubUrl':
-        setGithubUrl(value);
-        break;
-      default:
-        break;
-    }
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prevState => ({
+      ...prevState,
+      [name]: value
+    }));
   };
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
       // Validate form data
       if (!course || !year || !month || !batch) {
@@ -301,19 +282,21 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
       }
 
       // Validate required fields
-      if (!name.trim() || !email.trim()) {
+      if (!formData.name.trim() || !formData.email.trim()) {
         throw new Error('Name and Email are required fields.');
       }
 
-      // Prepare student data
       const submissionData = {
-        name: name.trim(),
-        email: email.trim(),
-        college: college.trim(),
-        department: department.trim(),
-        mobileNo: mobileNo.trim(),
-        linkedinUrl: linkedinUrl.trim(),
-        githubUrl: githubUrl.trim(),
+        ...formData,
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        college: formData.college?.trim() || '',
+        department: formData.department?.trim() || '',
+        mobileNo: formData.mobileNo?.trim() || '',
+        linkedinUrl: formData.linkedinUrl?.trim() || '',
+        githubUrl: formData.githubUrl?.trim() || '',
+        portfolioUrl: formData.portfolioUrl?.trim() || '',
+        twitterUrl: formData.twitterUrl?.trim() || '',
         course: typeof course === 'string'
           ? course
           : (course?.name || course?.course || 'networking'),
@@ -325,7 +308,8 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
           : (month?.name || 'January'),
         batch: typeof batch === 'string'
           ? batch
-          : (batch?.name || 'Batch 1')
+          : (batch?.name || 'Batch 1'),
+        fees: 0  // Add a default fee of 0
       };
 
       // Send request to add student
@@ -348,13 +332,17 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
       setBatchStudents(updatedStudentsByBatch);
 
       // Reset form fields
-      setName('');
-      setEmail('');
-      setCollege('');
-      setDepartment('');
-      setMobileNo('');
-      setLinkedinUrl('');
-      setGithubUrl('');
+      setFormData({
+        name: '',
+        email: '',
+        college: '',
+        department: '',
+        mobileNo: '',
+        linkedinUrl: '',
+        githubUrl: '',
+        portfolioUrl: '',
+        twitterUrl: ''
+      });
 
       // Close modal
       setShowModal(false);
@@ -386,7 +374,7 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
             });
             break;
           case 409:
-            errorMessage = `A student with email ${email} already exists.`;
+            errorMessage = `A student with email ${formData.email} already exists.`;
             break;
           case 400:
             errorMessage = error.response.data.message ||
@@ -446,75 +434,70 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
     setShowDetailsModal(true);
   };
 
-  const handleUpdateFees = async (studentId: string) => {
+  const handleGlobalFeesUpdate = async () => {
     try {
-      const feesToUpdate = newFees[studentId];
-
       // Validate fees
-      if (feesToUpdate === undefined || feesToUpdate === null) {
-        toast.error('Invalid fees amount');
-        return;
+
+
+      // Prepare batch details
+      const batchDetails = {
+        course: typeof course === 'string'
+          ? course
+          : (course?.name || course?.course || 'networking'),
+        year: typeof year === 'string'
+          ? year
+          : (year.year || (year.name && parseInt(year.name, 10).toString()) || '2025'),
+        month: typeof month === 'string'
+          ? month
+          : (month?.name || 'January'),
+        batch: batch || 'Batch 1'
+      };
+
+      // Send request to update fees for all students in the batch
+      const response = await axios.put('http://localhost:5000/api/students/update-batch-fees', {
+        ...batchDetails,
+
+      });
+
+      // Update local state
+      const updatedStudentsByBatch = { ...batchStudents };
+      const batchKey = `${batchDetails.course}-${batchDetails.year}-${batchDetails.month}-${batchDetails.batch}`;
+
+      if (updatedStudentsByBatch[batchKey]) {
+        updatedStudentsByBatch[batchKey] = updatedStudentsByBatch[batchKey].map(student => ({
+          ...student,
+
+        }));
       }
 
-      console.log('Updating fees for student:', {
-        studentId,
-        fees: feesToUpdate
-      });
+      setBatchStudents(updatedStudentsByBatch);
 
-      const response = await axios.put(`http://localhost:5000/api/students/updateFees/${studentId}`, {
-        fees: Number(feesToUpdate)
-      }, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
+      // Reset global fees edit state
 
-      // Use the server response to update the local state
-      const updatedStudent = response.data;
+      setSuccess('Fees updated successfully for all students in the batch');
+    } catch (error: any) {
+      console.error('Error updating batch fees:', error);
 
-      // Update batchStudents state to reflect the new fees
-      setBatchStudents(prevBatchStudents => {
-        const updatedBatchStudents = { ...prevBatchStudents };
-
-        // Iterate through each batch
-        Object.keys(updatedBatchStudents).forEach(batchName => {
-          const studentIndex = updatedBatchStudents[batchName].findIndex(
-            student => student._id === studentId
-          );
-
-          // If student found, update their fees
-          if (studentIndex !== -1) {
-            updatedBatchStudents[batchName][studentIndex] = {
-              ...updatedBatchStudents[batchName][studentIndex],
-              fees: updatedStudent.fees
-            };
-          }
-        });
-
-        return updatedBatchStudents;
-      });
-
-      // Reset editing state and clear new fees for this student
-      setEditingFees(prev => ({ ...prev, [studentId]: false }));
-      setNewFees(prev => {
-        const updatedNewFees = { ...prev };
-        delete updatedNewFees[studentId];
-        return updatedNewFees;
-      });
-
-      toast.success('Fees updated successfully');
-    } catch (error) {
-      console.error('Error updating fees:', error);
-      toast.error('Failed to update fees');
+      // More detailed error handling
+      if (error.response && error.response.status === 404) {
+        // No students found in the batch
+        const errorDetails = error.response.data.details || {};
+        setError(`No students found in the batch. 
+          Course: ${errorDetails.course}, 
+          Year: ${errorDetails.year}, 
+          Month: ${errorDetails.month}, 
+          Batch: ${errorDetails.batch}`);
+      } else {
+        // Generic error handling
+        setError(error.response?.data?.message || 'Failed to update fees');
+      }
     }
   };
 
   const renderStudentsByBatch = () => {
     return Object.entries(batchStudents).map(([batchName, students]) => (
       <div key={batchName} className="batch-students-container mb-4">
-        <div className="d-flex justify-content-between align-items-center mb-3">
-          <h3>{batchName} Students</h3>
-        </div>
+
         <div className="">
           {/* Table view for large devices */}
           <table className="students-table w-full border-collapse border border-gray-300 bg-white hidden lg:table">
@@ -539,9 +522,6 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
                   Course
                 </th>
                 <th className="px-4 py-2 border-b-2 border-blue-500 bg-blue-50 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">
-                  Fees
-                </th>
-                <th className="px-4 py-2 border-b-2 border-blue-500 bg-blue-50 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -558,57 +538,7 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
                   <td className="px-4 py-2 border border-gray-300 whitespace-nowrap">{student.department}</td>
                   <td className="px-4 py-2 border border-gray-300 whitespace-nowrap">{student.mobileNo}</td>
                   <td className="px-4 py-2 border border-gray-300 whitespace-nowrap">{student.course}</td>
-                  <td className="px-4 py-2 border border-gray-300 whitespace-nowrap">
 
-                    {editingFees[student._id] ? (
-                      <div className="flex items-center">
-                        <input
-                          type="number"
-                          value={newFees[student._id] ?? student.fees ?? 0}
-                          onChange={(e) => setNewFees(prev => ({
-                            ...prev,
-                            [student._id]: Number(e.target.value)
-                          }))}
-                          className="border rounded px-2 py-1 w-24 mr-2"
-                        />
-                        <button
-                          onClick={() => handleUpdateFees(student._id)}
-                          className="bg-green-500 text-white px-2 py-1 rounded text-sm mr-2"
-                        >
-                          Save
-                        </button>
-                        <button
-                          onClick={() => setEditingFees(prev => ({ ...prev, [student._id]: false }))}
-                          className="bg-gray-500 text-white px-2 py-1 rounded text-sm"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex justify-between items-center">
-                        <h1>
-                          ₹{student.fees ?? 0}
-                        </h1>
-                        <button
-                          onClick={() => {
-                            setNewFees(prev => ({
-                              ...prev,
-                              [student._id]: student.fees ?? 0
-                            }));
-                            setEditingFees(prev => ({ ...prev, [student._id]: true }));
-                          }}
-                          className="ml-2 text-blue-500 hover:text-blue-700"
-                          title="Edit Fees"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                            stroke="currentColor" className="size-6">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                              d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
-                          </svg>
-                        </button>
-                      </div>
-                    )}
-                  </td>
                   <td className="px-4 py-2 border border-gray-300 whitespace-nowrap">
                     <div className="flex gap-2">
                       <button
@@ -666,48 +596,7 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
                   </p>
                   <p className="text-sm font-medium text-gray-700">
                     <span className="font-bold">Fees: </span>
-                    {editingFees[student._id] ? (
-                      <div className="flex items-center">
-                        <input
-                          type="number"
-                          value={newFees[student._id] ?? student.fees ?? 0}
-                          onChange={(e) => setNewFees(prev => ({
-                            ...prev,
-                            [student._id]: Number(e.target.value)
-                          }))}
-                          className="border rounded px-2 py-1 w-24 mr-2"
-                        />
-                        <button
-                          onClick={() => handleUpdateFees(student._id)}
-                          className="bg-green-500 text-white px-2 py-1 rounded text-sm mr-2"
-                        >
-                          Save
-                        </button>
-                        <button
-                          onClick={() => setEditingFees(prev => ({ ...prev, [student._id]: false }))}
-                          className="bg-gray-500 text-white px-2 py-1 rounded text-sm"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center">
-                        ₹{student.fees ?? 0}
-                        <button
-                          onClick={() => {
-                            setNewFees(prev => ({
-                              ...prev,
-                              [student._id]: student.fees ?? 0
-                            }));
-                            setEditingFees(prev => ({ ...prev, [student._id]: true }));
-                          }}
-                          className="ml-2 text-blue-500 hover:text-blue-700"
-                          title="Edit Fees"
-                        >
-                          <i className="bi bi-pencil-square"></i>
-                        </button>
-                      </div>
-                    )}
+                    ₹{student.fees ?? 0}
                   </p>
                   <div className="flex gap-2 mt-2">
                     <button
@@ -789,6 +678,36 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
                     ) : (
                       <p className="text-gray-500">No GitHub profile provided</p>
                     )}
+                    {selectedStudent.portfolioUrl ? (
+                      <p>
+                        <span className="font-bold">Portfolio:</span>{' '}
+                        <a
+                          href={selectedStudent.portfolioUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          View Link <i className="bi bi-box-arrow-up-right text-xs"></i>
+                        </a>
+                      </p>
+                    ) : (
+                      <p className="text-gray-500">No Portfolio provided</p>
+                    )}
+                    {selectedStudent.twitterUrl ? (
+                      <p>
+                        <span className="font-bold">Twitter:</span>{' '}
+                        <a
+                          href={selectedStudent.twitterUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          View Link <i className="bi bi-box-arrow-up-right text-xs"></i>
+                        </a>
+                      </p>
+                    ) : (
+                      <p className="text-gray-500">No Twitter profile provided</p>
+                    )}
                   </div>
                 </div>
               )}
@@ -824,7 +743,12 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
       'Course': student.course,
       'Batch': student.batch,
       'Year': student.year,
-      'Month': student.month
+      'Month': student.month,
+      'LinkedIn URL': student.linkedinUrl || 'N/A',
+      'GitHub URL': student.githubUrl || 'N/A',
+      'Portfolio URL': student.portfolioUrl || 'N/A',
+      'Twitter URL': student.twitterUrl || 'N/A',
+      // 'Fees': student.fees !== undefined ? student.fees : 'N/A'
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
@@ -904,6 +828,8 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
             <strong className="absolute right-0 lg:text-lg md:text-md sm:text-sm text-blue-500">
               {totalStudents} Students
             </strong>
+
+            <span className='lg:text-xl md:text-md sm:text-sm'> Course Fees: {course?.description || 'No description available'}</span>
           </div>
           {renderStudentsByBatch()}
         </div>
@@ -921,7 +847,7 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
               <Form.Control
                 type="text"
                 name="name"
-                value={name}
+                value={formData.name}
                 onChange={handleInputChange}
                 required
               />
@@ -931,7 +857,7 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
               <Form.Control
                 type="email"
                 name="email"
-                value={email}
+                value={formData.email}
                 onChange={handleInputChange}
                 required
               />
@@ -941,7 +867,7 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
               <Form.Control
                 type="text"
                 name="college"
-                value={college}
+                value={formData.college}
                 onChange={handleInputChange}
               />
             </Form.Group>
@@ -950,7 +876,7 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
               <Form.Control
                 type="text"
                 name="department"
-                value={department}
+                value={formData.department}
                 onChange={handleInputChange}
               />
             </Form.Group>
@@ -959,7 +885,7 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
               <Form.Control
                 type="tel"
                 name="mobileNo"
-                value={mobileNo}
+                value={formData.mobileNo}
                 onChange={handleInputChange}
               />
             </Form.Group>
@@ -968,7 +894,7 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
               <Form.Control
                 type="text"
                 name="linkedinUrl"
-                value={linkedinUrl}
+                value={formData.linkedinUrl}
                 onChange={handleInputChange}
               />
             </Form.Group>
@@ -977,7 +903,25 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
               <Form.Control
                 type="text"
                 name="githubUrl"
-                value={githubUrl}
+                value={formData.githubUrl}
+                onChange={handleInputChange}
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Portfolio URL</Form.Label>
+              <Form.Control
+                type="text"
+                name="portfolioUrl"
+                value={formData.portfolioUrl}
+                onChange={handleInputChange}
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Twitter URL</Form.Label>
+              <Form.Control
+                type="text"
+                name="twitterUrl"
+                value={formData.twitterUrl}
                 onChange={handleInputChange}
               />
             </Form.Group>

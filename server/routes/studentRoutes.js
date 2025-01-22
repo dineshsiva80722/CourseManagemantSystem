@@ -108,6 +108,8 @@ router.get('/students', async (req, res) => {
         course: student.course,
         linkedinUrl: student.linkedinUrl,
         githubUrl: student.githubUrl,
+        portfolioUrl: student.portfolioUrl,
+        twitterUrl: student.twitterUrl,
         batch: student.batch,
         month: student.month,
         year: student.year,
@@ -138,6 +140,8 @@ router.post('/students', async (req, res) => {
       course,
       linkedinUrl,
       githubUrl,
+      portfolioUrl,
+      twitterUrl,
       batch,
       year,
       month
@@ -154,6 +158,8 @@ router.post('/students', async (req, res) => {
       course,
       linkedinUrl,
       githubUrl,
+      portfolioUrl,
+      twitterUrl,
       batch,
       year,
       month
@@ -180,6 +186,8 @@ router.post('/students', async (req, res) => {
       course,
       linkedinUrl: linkedinUrl || '',
       githubUrl: githubUrl || '',
+      portfolioUrl: portfolioUrl || '',
+      twitterUrl: twitterUrl || '',
       batch,
       year,
       month
@@ -238,6 +246,8 @@ router.post('/students/add', async (req, res) => {
       course,
       linkedinUrl,
       githubUrl,
+      portfolioUrl,
+      twitterUrl,
       batch,
       year,
       month
@@ -270,6 +280,8 @@ router.post('/students/add', async (req, res) => {
       course,
       linkedinUrl,
       githubUrl,
+      portfolioUrl,
+      twitterUrl,
       batch,
       year,
       month
@@ -285,9 +297,12 @@ router.post('/students/add', async (req, res) => {
       course: course.trim(),
       linkedinUrl: linkedinUrl ? linkedinUrl.trim() : '',
       githubUrl: githubUrl ? githubUrl.trim() : '',
+      portfolioUrl: portfolioUrl ? portfolioUrl.trim() : '',
+      twitterUrl: twitterUrl ? twitterUrl.trim() : '',
       batch: batch.trim(),
       year: year.trim(),
-      month: month.trim()
+      month: month.trim(),
+      fees: 0
     });
 
     console.log('Attempting to save student:', newStudent.toObject());
@@ -1390,6 +1405,85 @@ router.put('/students/updateFees/:studentId', async (req, res) => {
     res.status(500).json({ 
       message: 'Server error updating fees', 
       error: error.message 
+    });
+  }
+});
+
+// New route to update fees for an entire batch
+router.put('/students/update-batch-fees', async (req, res) => {
+  try {
+    const { 
+      course, 
+      year, 
+      month, 
+      batch, 
+      fees 
+    } = req.body;
+
+    // Validate input
+    if (!course || !year || !month || !batch || fees === undefined) {
+      return res.status(400).json({
+        message: 'Missing required fields for batch fees update'
+      });
+    }
+
+    // Validate fees
+    if (fees < 0) {
+      return res.status(400).json({
+        message: 'Fees cannot be negative'
+      });
+    }
+
+    // Generate dynamic collection name
+    const collectionName = generateCollectionName(course, year, month, batch);
+    const DynamicStudentModel = createDynamicModel(collectionName);
+
+    // Update all students in the batch
+    const updateResult = await DynamicStudentModel.updateMany(
+      {}, 
+      { $set: { fees: fees } }
+    );
+
+    // Check if any students were updated
+    if (updateResult.modifiedCount === 0) {
+      // Log additional details for debugging
+      const studentCount = await DynamicStudentModel.countDocuments({
+        course: course,
+        year: year,
+        month: month,
+        batch: batch
+      });
+
+      console.error('Batch details for debugging:', {
+        course,
+        year,
+        month,
+        batch,
+        studentCount
+      });
+
+      return res.status(404).json({
+        message: 'No students found in the specified batch',
+        details: {
+          course,
+          year,
+          month,
+          batch,
+          studentCount
+        }
+      });
+    }
+
+    res.status(200).json({
+      message: 'Batch fees updated successfully',
+      updatedCount: updateResult.modifiedCount
+    });
+
+  } catch (error) {
+    console.error('Error updating batch fees:', error);
+    res.status(500).json({
+      message: 'Failed to update batch fees',
+      error: error.message
     });
   }
 });

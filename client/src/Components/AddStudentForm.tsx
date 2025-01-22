@@ -18,7 +18,9 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ batchId, course, year, 
     department: '',
     mobileNo: '',
     linkedinUrl: '',
-    githubUrl: ''
+    githubUrl: '',
+    portfolioUrl: '',
+    twitterUrl: ''
   });
 
   const [error, setError] = useState<string | null>(null);
@@ -54,6 +56,8 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ batchId, course, year, 
         batch: batchId || 'Batch 1',
         linkedinUrl: formData.linkedinUrl?.trim() || '', // Optional field
         githubUrl: formData.githubUrl?.trim() || '', // Optional field
+        portfolioUrl: formData.portfolioUrl?.trim() || '', // New field
+        twitterUrl: formData.twitterUrl?.trim() || '', // New field
         year: typeof year === 'string'
           ? year
           : (year.year || (year.name && parseInt(year.name, 10).toString()) || '2025'),
@@ -78,7 +82,9 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ batchId, course, year, 
         department: '',
         mobileNo: '',
         linkedinUrl: '',
-        githubUrl: ''
+        githubUrl: '',
+        portfolioUrl: '',
+        twitterUrl: ''
       });
 
       // Set success state
@@ -228,6 +234,26 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ batchId, course, year, 
             type="url"
             name="githubUrl"
             value={formData.githubUrl}
+            onChange={handleChange}
+          />
+        </Form.Group>
+
+        <Form.Group className="mb-3">
+          <Form.Label>Portfolio URL (Optional)</Form.Label>
+          <Form.Control
+            type="url"
+            name="portfolioUrl"
+            value={formData.portfolioUrl}
+            onChange={handleChange}
+          />
+        </Form.Group>
+
+        <Form.Group className="mb-3">
+          <Form.Label>Twitter URL (Optional)</Form.Label>
+          <Form.Control
+            type="url"
+            name="twitterUrl"
+            value={formData.twitterUrl}
             onChange={handleChange}
           />
         </Form.Group>

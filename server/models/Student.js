@@ -41,6 +41,14 @@ const StudentSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  portfolioUrl: {
+    type: String,
+    trim: true
+  },
+  twitterUrl: {
+    type: String,
+    trim: true
+  },
   batch: {
     type: String,
     required: [true, 'Batch is required']
