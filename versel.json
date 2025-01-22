@@ -1,0 +1,49 @@
+{
+    "version": 2,
+    "name": "course-management-system",
+    "builds": [
+      {
+        "src": "client/package.json",
+        "use": "@vercel/react",
+        "config": {
+          "buildCommand": "npm run build",
+          "outputDirectory": "build"
+        }
+      },
+      {
+        "src": "server/server.js",
+        "use": "@vercel/node"
+      }
+    ],
+    "routes": [
+      {
+        "src": "/api/(.*)",
+        "dest": "server/server.js"
+      },
+      {
+        "src": "/(.*)",
+        "dest": "client/build/index.html"
+      }
+    ],
+    "env": {
+      "REACT_APP_API_URL": "@cms_api_url",
+      "MONGODB_URI": "@mongodb_connection_string"
+    },
+    "regions": ["bom1"],
+    "headers": [
+      {
+        "source": "/api/(.*)",
+        "headers": [
+          { "key": "Access-Control-Allow-Credentials", "value": "true" },
+          { "key": "Access-Control-Allow-Origin", "value": "*" },
+          { "key": "Access-Control-Allow-Methods", "value": "GET,OPTIONS,PATCH,DELETE,POST,PUT" },
+          { "key": "Access-Control-Allow-Headers", "value": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version" }
+        ]
+      }
+    ],
+    "rewrites": [
+      { "source": "/", "destination": "/" },
+      { "source": "/students", "destination": "/" },
+      { "source": "/courses", "destination": "/" }
+    ]
+  }

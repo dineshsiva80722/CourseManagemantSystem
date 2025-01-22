@@ -766,6 +766,102 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
     window.open(url, '_blank');
   };
 
+  const handleImportFromExcel = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      // Validate navigation state
+      if (!course || !year || !batch || !month) {
+        throw new Error('Please select a course, year, batch, and month before importing students.');
+      }
+
+      // Read Excel file
+      const fileReader = new FileReader();
+      fileReader.onload = async (e) => {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
+
+        // Validate imported data
+        const validStudents = jsonData.filter(student => {
+          // Basic validation for required fields
+          const requiredFields = ['Name', 'Email'];
+          return requiredFields.every(field => student[field]);
+        });
+
+        if (validStudents.length === 0) {
+          toast.error('No valid students found in the Excel file.');
+          return;
+        }
+
+        // Prepare students for backend
+        const studentsToImport = validStudents.map(student => ({
+          name: student.Name,
+          email: student.Email,
+          college: student.College || '',
+          department: student.Department || '',
+          mobileNo: student['Mobile No'] || '',
+          linkedinUrl: student['LinkedIn URL'] || '',
+          githubUrl: student['GitHub URL'] || '',
+          portfolioUrl: student['Portfolio URL'] || '',
+          twitterUrl: student['Twitter URL'] || '',
+          course: typeof course === 'string'
+            ? course
+            : (course?.name || course?.course || 'networking'),
+          year: typeof year === 'string'
+            ? year
+            : (year?.year || year?.name || '2025'),
+          month: typeof month === 'string'
+            ? month
+            : (month?.name || 'January'),
+          batch: typeof batch === 'string'
+            ? batch
+            : (batch?.name || 'Batch 1'),
+          fees: 0
+        }));
+
+        try {
+          // Send bulk import request
+          const response = await axios.post('http://localhost:5000/api/students/bulk-import', {
+            students: studentsToImport
+          });
+
+          // Update local state with imported students
+          const importedStudents = response.data.students || [];
+          const updatedStudentsByBatch = { ...batchStudents };
+          const batchKey = `${studentsToImport[0].course}-${studentsToImport[0].year}-${studentsToImport[0].month}-${studentsToImport[0].batch}`;
+
+          updatedStudentsByBatch[batchKey] = [
+            ...(updatedStudentsByBatch[batchKey] || []),
+            ...importedStudents
+          ];
+
+          setBatchStudents(updatedStudentsByBatch);
+
+          // Show success message
+          toast.success(`Successfully imported ${importedStudents.length} students`);
+        } catch (importError: any) {
+          console.error('Bulk import error:', importError);
+          toast.error(importError.response?.data?.message || 'Failed to import students');
+        }
+      };
+
+      fileReader.readAsArrayBuffer(file);
+    } catch (error: any) {
+      console.error('Excel import error:', error);
+      toast.error(error.message || 'Failed to import students');
+    }
+  };
+
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
+
   return (
     <Container className="py-4">
       <ToastContainer />
@@ -797,6 +893,20 @@ const Studentspannel: React.FC<StudentPannelProps> = ({ batchId }) => {
           >
             <span className='hidden lg:inline'>New</span>Tab
           </Button>
+          <Button
+            variant="primary"
+            onClick={triggerFileInput}
+            className="lg:text-lg md:text-md text-sm"
+          >
+            <span className='hidden lg:inline'>Import</span> Excel
+          </Button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleImportFromExcel}
+            accept=".xlsx, .xls"
+            style={{ display: 'none' }}
+          />
         </div>
       </div>
 
