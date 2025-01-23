@@ -1,0 +1,18 @@
+{
+    "version": 2,
+    "builds": [
+      {
+        "src": "server.js",
+        "use": "@vercel/node"
+      }
+    ],
+    "routes": [
+      {
+        "src": "/api/(.*)",
+        "dest": "server.js"
+      }
+    ],
+    "env": {
+      "MONGODB_URI": "mongodb+srv://dineshsiva693:dineshsiva693@cluster0.uep56.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+    }
+  }

@@ -14,6 +14,9 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://dineshsiva693:dineshsiva693@cluster0.uep56.mongodb.net/course_management?retryWrites=true&w=majority&appName=Cluster0';
+app.get('/api', (req, res) => {
+  res.json({ message: 'Backend is running' });
+});
 
 app.use(cors({
   origin: '*', 
